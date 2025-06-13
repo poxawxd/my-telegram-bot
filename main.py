@@ -9,6 +9,9 @@ import threading
 import json
 import os
 
+nest_asyncio.apply()
+
+
 
 # ===== 📂 ส่วนที่ 2: โหลดไฟล์ meta.json และ stock.json =====
 # โหลดข้อมูลยอดซื้อจากไฟล์
@@ -599,6 +602,9 @@ async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ===== 🚀 ส่วนที่ 10: เริ่มต้นบอท Telegram =====
 async def main():
+    print("✅ BOT_TOKEN:", repr(TOKEN))
+print("✅ ADMIN_ID:", repr(ADMIN_ID))
+print("✅ RENDER_EXTERNAL_HOSTNAME:", os.environ.get("RENDER_EXTERNAL_HOSTNAME"))
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
