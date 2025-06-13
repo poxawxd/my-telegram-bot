@@ -604,8 +604,12 @@ async def main():
     app.add_handler(MessageHandler(filters.Regex(r"^/deny_\d+$"), deny))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
-    print("🤖 Bot is running...")
-    app.run_polling()
+    print("🤖 Bot is running with Webhook...")
+    port = int(os.environ.get("PORT", 8443))
+    await app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/webhook"
 
 if __name__ == "__main__":
     nest_asyncio.apply()
