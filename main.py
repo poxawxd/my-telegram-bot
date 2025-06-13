@@ -416,16 +416,26 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
         return
 
-    await context.bot.send_message(
-        chat_id=user_id,
-        text=(
-            f"✅ ยืนยันการชำระเงิน\n"
-            f"📧 Gmail: {order['gmail']}\n"
-            f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}\n"
-            f"🎉 คุณสุ่มได้: {order['item']}" if order['price'] == 20 else
-            f"✅ ยืนยันการชำระเงิน\n📧 Gmail: {order['gmail']}\n🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
+    if order["price"] == 20:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=(
+                f"✅ ยืนยันการชำระเงิน\n"
+                f"📧 Gmail: {order['gmail']}\n"
+                f"🎰 คุณสุ่มได้: *{order['item']}*\n"
+                f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
+            ),
+            parse_mode="Markdown"
         )
-    )
+    else:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=(
+                f"✅ ยืนยันการชำระเงิน\n"
+                f"📧 Gmail: {order['gmail']}\n"
+                f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
+            )
+        )
 
     # 👇 บันทึกตรงๆ ไปยัง meta.json ทันที (ไม่ผ่าน merge)
     try:
@@ -525,14 +535,14 @@ async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
 
         # ✅ ส่งภาพสุ่ม
-        msg1 = await update.effective_message.reply_photo(
+       msg1 = await update.effective_message.reply_photo(
             photo="https://i.postimg.cc/3JrJJDrm/image.jpg",
             caption=(
-                f"🎰 คุณสุ่มได้: *{item}*\n\n"
+                "🎰 ระบบสุ่มสินค้า (20฿)\n\n"
                 "📌 โปรดโอนเงิน 20 บาท ไปยัง PromptPay\n"
                 "`0863469001`\n\n"
                 "📤 ส่ง Gmail และสลิปมาที่แชทนี้ได้เลย\n"
-                "✅ หากเรียบร้อย ระบบจะส่งลิงก์ให้โดยอัตโนมัติ"
+                "✅ หากเรียบร้อย ระบบจะส่งลิงก์สินค้าและแจ้งผลการสุ่ม"
             ),
             parse_mode="Markdown",
             reply_markup=cancel_button
