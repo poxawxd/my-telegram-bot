@@ -4,4 +4,3 @@ telegram
 dnspython
 nest-asyncio==1.6.0
 requests
-openai==0.28.1
