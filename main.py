@@ -9,9 +9,6 @@ import threading
 import json
 import os
 
-nest_asyncio.apply()
-
-
 
 # ===== 📂 ส่วนที่ 2: โหลดไฟล์ meta.json และ stock.json =====
 # โหลดข้อมูลยอดซื้อจากไฟล์
@@ -438,7 +435,17 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"📧 Gmail: {order['gmail']}\n"
                 f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
             )
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=(
+            f"✅ ยืนยันการชำระเงิน\n"
+            f"📧 Gmail: {order['gmail']}\n"
+            f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}\n"
+            f"🎉 คุณสุ่มได้: {order['item']}" if order['price'] == 20 else
+            f"✅ ยืนยันการชำระเงิน\n📧 Gmail: {order['gmail']}\n🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
         )
+
+    )
 
     # 👇 บันทึกตรงๆ ไปยัง meta.json ทันที (ไม่ผ่าน merge)
     try:
@@ -542,10 +549,12 @@ async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.postimg.cc/3JrJJDrm/image.jpg",
             caption=(
                 "🎰 ระบบสุ่มสินค้า (20฿)\n\n"
+                f"🎰 คุณสุ่มได้: *{item}*\n\n"
                 "📌 โปรดโอนเงิน 20 บาท ไปยัง PromptPay\n"
                 "`0863469001`\n\n"
                 "📤 ส่ง Gmail และสลิปมาที่แชทนี้ได้เลย\n"
                 "✅ หากเรียบร้อย ระบบจะส่งลิงก์สินค้าและแจ้งผลการสุ่ม"
+                "✅ หากเรียบร้อย ระบบจะส่งลิงก์ให้โดยอัตโนมัติ"
             ),
             parse_mode="Markdown",
             reply_markup=cancel_button
@@ -602,9 +611,6 @@ async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ===== 🚀 ส่วนที่ 10: เริ่มต้นบอท Telegram =====
 async def main():
-    print("✅ BOT_TOKEN:", repr(TOKEN))
-print("✅ ADMIN_ID:", repr(ADMIN_ID))
-print("✅ RENDER_EXTERNAL_HOSTNAME:", os.environ.get("RENDER_EXTERNAL_HOSTNAME"))
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
@@ -620,13 +626,8 @@ print("✅ RENDER_EXTERNAL_HOSTNAME:", os.environ.get("RENDER_EXTERNAL_HOSTNAME"
     app.add_handler(MessageHandler(filters.Regex(r"^/deny_\d+$"), deny))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
-    print("🤖 Bot is running with Webhook...")
-    port = int(os.environ.get("PORT", 8443))
-    await app.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/webhook"
-    )
+    print("🤖 Bot is running...")
+    app.run_polling()
 
 if __name__ == "__main__":
     nest_asyncio.apply()
