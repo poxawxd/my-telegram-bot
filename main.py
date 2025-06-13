@@ -535,7 +535,7 @@ async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
 
         # ✅ ส่งภาพสุ่ม
-       msg1 = await update.effective_message.reply_photo(
+        msg1 = await update.effective_message.reply_photo(
             photo="https://i.postimg.cc/3JrJJDrm/image.jpg",
             caption=(
                 "🎰 ระบบสุ่มสินค้า (20฿)\n\n"
@@ -620,6 +620,7 @@ async def main():
         listen="0.0.0.0",
         port=port,
         webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/webhook"
+    )
 
 if __name__ == "__main__":
     nest_asyncio.apply()
