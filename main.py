@@ -27,8 +27,8 @@ from telegram.ext import (
 )
 from keep_alive import keep_alive
 
-TOKEN = "8092616483:AAEw4wVpvhB1dXhfk-rDhvGxcuZNQcae7BA"
-ADMIN_ID = 5895376486
+TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
 # 📦 สินค้า
 
