@@ -416,25 +416,27 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
         return
 
-if order["price"] == 20:
-    text = (
-        f"✅ ยืนยันการชำระเงิน\n"
-        f"📧 Gmail: {order['gmail']}\n"
-        f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}\n"
-        f"🎉 คุณสุ่มได้: {order['item']}"
-    )
-else:
-    text = (
-        f"✅ ยืนยันการชำระเงิน\n"
-        f"📧 Gmail: {order['gmail']}\n"
-        f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
+    # ✅ สร้างข้อความตอบกลับแบบปลอดภัย
+    if order["price"] == 20:
+        text = (
+            f"✅ ยืนยันการชำระเงิน\n"
+            f"📧 Gmail: {order['gmail']}\n"
+            f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}\n"
+            f"🎉 คุณสุ่มได้: {order['item']}"
+        )
+    else:
+        text = (
+            f"✅ ยืนยันการชำระเงิน\n"
+            f"📧 Gmail: {order['gmail']}\n"
+            f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
+        )
+
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=text
     )
 
-await context.bot.send_message(
-    chat_id=user_id,
-    text=text
-)
-    # 👇 บันทึกตรงๆ ไปยัง meta.json ทันที (ไม่ผ่าน merge)
+    # 👇 บันทึก meta.json
     try:
         if os.path.exists("meta.json"):
             with open("meta.json", "r") as f:
@@ -442,63 +444,31 @@ await context.bot.send_message(
         else:
             current_meta = {}
 
-        # เพิ่มข้อมูลใหม่
         user_data = current_meta.get(user_id_str, {})
         user_data["total_spent"] = user_data.get("total_spent", 0) + order["price"]
         if order["price"] == 20:
             user_data["gacha_count"] = user_data.get("gacha_count", 0) + 1
         current_meta[user_id_str] = user_data
 
-        # เขียนลง meta.json
         with open("meta.json", "w") as f:
             json.dump(current_meta, f, indent=2)
         print("✅ เขียน meta.json ตรงๆ สำเร็จ")
     except Exception as e:
         print(f"❌ เขียน meta.json ล้มเหลว: {e}")
 
-
+    # ✅ แจ้งแอดมินในแชท
     await update.message.reply_text(
         f"✅ ส่งลิงก์ให้ {user_id} แล้ว (สุ่มได้: {order['item']})" if order['price'] == 20 else
         f"✅ ส่งลิงก์ให้ {user_id} แล้ว"
     )
+
+    # ✅ ล้างคำสั่ง
     del pending_orders[user_id]
-
-    # ✅ ล้างสถานะคำสั่งของผู้ใช้หลังแอดมินอนุมัติ
     if user_id in user_states:
         user_states[user_id].pop("pending_item", None)
         user_states[user_id].pop("pending_price", None)
 
-    approved_users.add(user_id)  # ✅ บันทึกว่าเคย approve ไปแล้ว
-
-async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id != ADMIN_ID:
-        return
-    try:
-        user_id = int(update.message.text.split("_")[1])
-    except:
-        return
-
-    if user_id in approved_users:
-        await update.message.reply_text(f"⚠️ ออเดอร์ของ {user_id} ถูก *อนุมัติ* ไปแล้ว ไม่สามารถปฏิเสธได้")
-        return
-
-    if user_id in denied_users:
-        await update.message.reply_text(f"⚠️ ออเดอร์ของ {user_id} ถูก *ปฏิเสธ* ไปแล้ว")
-        return
-
-    await context.bot.send_message(
-        chat_id=user_id,
-        text="❌ การชำระเงินไม่ตรงยอด\n⛔ มีปัญหาโปรดติดต่อแอดมิน @ShiroiKJP"
-    )
-    await update.message.reply_text(f"❌ ปฏิเสธออเดอร์ {user_id} แล้ว")
-
-    if user_id in pending_orders:
-        del pending_orders[user_id]
-
-    if user_id in user_states:
-        user_states[user_id].pop("pending_item", None)
-        user_states[user_id].pop("pending_price", None)
-
+    approved_users.add(user_id)
     denied_users.add(user_id)  # บันทึกว่าเคยปฏิเสธแล้ว
 
 
