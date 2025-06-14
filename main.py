@@ -412,42 +412,37 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         order = pending_orders[user_id]
-    except Exception as e:
-        await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
-        return
 
-   item_name = order["item"]
-item_data = stock.get(item_name, {})
-item_url = item_data.get("url")
+        item_name = order["item"]
+        item_data = stock.get(item_name, {})
+        item_url = item_data.get("url")
 
-if not item_url:
-    await update.message.reply_text(f"❌ ไม่พบลิงก์สินค้า '{item_name}' ใน stock.json")
-    return
+        if not item_url:
+            await update.message.reply_text(f"❌ ไม่พบลิงก์สินค้า '{item_name}' ใน stock.json")
+            return
 
-# ถ้า item อยู่ใน gacha_stock ถือว่าเป็นของที่สุ่มได้
-if item_name in gacha_stock:
-    text = (
-        f"✅ ยืนยันการชำระเงิน (สุ่ม 20 บาท)\n"
-        f"📧 Gmail: {order['gmail']}\n"
-        f"🎰 คุณสุ่มได้: *{item_name}*\n"
-        f"🔗 ลิงก์สินค้า: {item_url}"
-    )
-else:
-    text = (
-        f"✅ ยืนยันการชำระเงิน\n"
-        f"📧 Gmail: {order['gmail']}\n"
-        f"🔗 ลิงก์สินค้า: {item_url}"
-    )
+        # ถ้า item อยู่ใน gacha_stock ถือว่าเป็นของที่สุ่มได้
+        if item_name in gacha_stock:
+            text = (
+                f"✅ ยืนยันการชำระเงิน (สุ่ม 20 บาท)\n"
+                f"📧 Gmail: {order['gmail']}\n"
+                f"🎰 คุณสุ่มได้: *{item_name}*\n"
+                f"🔗 ลิงก์สินค้า: {item_url}"
+            )
+        else:
+            text = (
+                f"✅ ยืนยันการชำระเงิน\n"
+                f"📧 Gmail: {order['gmail']}\n"
+                f"🔗 ลิงก์สินค้า: {item_url}"
+            )
 
-await context.bot.send_message(
-    chat_id=user_id,
-    text=text,
-    parse_mode="Markdown"
-)
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=text,
+            parse_mode="Markdown"
+        )
 
-
-    # 👇 บันทึกตรงๆ ไปยัง meta.json ทันที (ไม่ผ่าน merge)
-    try:
+        # 👇 บันทึกตรงๆ ไปยัง meta.json ทันที (ไม่ผ่าน merge)
         if os.path.exists("meta.json"):
             with open("meta.json", "r") as f:
                 current_meta = json.load(f)
@@ -462,25 +457,6 @@ await context.bot.send_message(
         current_meta[user_id_str] = user_data
 
         # เขียนลง meta.json
-        with open("meta.json", "w") as f:
-            json.dump(current_meta, f, indent=2)
-        print("✅ เขียน meta.json ตรงๆ สำเร็จ")
-    except Exception as e:
-        print(f"❌ เขียน meta.json ล้มเหลว: {e}")
-
-
-    await update.message.reply_text(
-        f"✅ ส่งลิงก์ให้ {user_id} แล้ว (สุ่มได้: {order['item']})" if order['price'] == 20 else
-        f"✅ ส่งลิงก์ให้ {user_id} แล้ว"
-    )
-    del pending_orders[user_id]
-
-    # ✅ ล้างสถานะคำสั่งของผู้ใช้หลังแอดมินอนุมัติ
-    if user_id in user_states:
-        user_states[user_id].pop("pending_item", None)
-        user_states[user_id].pop("pending_price", None)
-
-    approved_users.add(user_id)  # ✅ บันทึกว่าเคย approve ไปแล้ว
 
 async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id != ADMIN_ID:
