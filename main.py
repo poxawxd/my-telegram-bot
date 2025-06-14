@@ -546,18 +546,6 @@ async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=cancel_button
             )
 
-            await context.bot.send_message(
-                chat_id=ADMIN_ID,
-                text=(
-                    f"📥 แจ้งเตือน!\n"
-                    f"ผู้ใช้ @{update.effective_user.username or 'ไม่มี username'} (ID: {user_id})\n"
-                    f"สุ่มได้ *Secret Archive Drop* 🎁\n"
-                    f"กรุณาตรวจสอบและส่งลิงก์ลับให้โดยตรง"
-                ),
-                parse_mode="Markdown"
-            )
-
-
 # แจ้งแอดมิน
             await context.bot.send_message(
             chat_id=ADMIN_ID,
