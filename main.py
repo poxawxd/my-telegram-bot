@@ -591,7 +591,7 @@ async def main():
     app.run_polling()
 
 if __name__ == "__main__":
-    nest_asyncio.apply()c
+    nest_asyncio.apply()
     keep_alive()
     dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
     dns.resolver.default_resolver.nameservers = ['8.8.8.8', '1.1.1.1']
