@@ -629,16 +629,18 @@ async def main():
     print("🤖 Bot is running...")
     app.run_polling()
 
+async def run_bot_forever():
+    while True:
+        try:
+            await main()
+        except Exception as e:
+            print(f"❗ Bot crashed: {e}, restarting in 5s...")
+            await asyncio.sleep(5)
+
 if __name__ == "__main__":
     nest_asyncio.apply()
     keep_alive()
     dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
     dns.resolver.default_resolver.nameservers = ['8.8.8.8', '1.1.1.1']
 
-    loop = asyncio.get_event_loop()
-    while True:
-        try:
-            loop.run_until_complete(main())
-        except Exception as e:
-            print(f"❗ Bot crashed: {e}, restarting in 5s...")
-            time.sleep(5)
+    asyncio.run(run_bot_forever())
