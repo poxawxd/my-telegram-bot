@@ -416,26 +416,34 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
         return
 
-    if order["price"] == 20:
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=(
-                f"✅ ยืนยันการชำระเงิน\n"
-                f"📧 Gmail: {order['gmail']}\n"
-                f"🎰 คุณสุ่มได้: *{order['item']}*\n"
-                f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
-            ),
-            parse_mode="Markdown"
-        )
-    else:
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=(
-                f"✅ ยืนยันการชำระเงิน\n"
-                f"📧 Gmail: {order['gmail']}\n"
-                f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
-            )
-        )
+   item_name = order["item"]
+item_data = stock.get(item_name, {})
+item_url = item_data.get("url")
+
+if not item_url:
+    await update.message.reply_text(f"❌ ไม่พบลิงก์สินค้า '{item_name}' ใน stock.json")
+    return
+
+# ถ้า item อยู่ใน gacha_stock ถือว่าเป็นของที่สุ่มได้
+if item_name in gacha_stock:
+    text = (
+        f"✅ ยืนยันการชำระเงิน (สุ่ม 20 บาท)\n"
+        f"📧 Gmail: {order['gmail']}\n"
+        f"🎰 คุณสุ่มได้: *{item_name}*\n"
+        f"🔗 ลิงก์สินค้า: {item_url}"
+    )
+else:
+    text = (
+        f"✅ ยืนยันการชำระเงิน\n"
+        f"📧 Gmail: {order['gmail']}\n"
+        f"🔗 ลิงก์สินค้า: {item_url}"
+    )
+
+await context.bot.send_message(
+    chat_id=user_id,
+    text=text,
+    parse_mode="Markdown"
+)
 
 
     # 👇 บันทึกตรงๆ ไปยัง meta.json ทันที (ไม่ผ่าน merge)
