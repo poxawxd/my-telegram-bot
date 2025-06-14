@@ -416,37 +416,24 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
         return
 
-    if order["price"] == 20:
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=(
-                f"✅ ยืนยันการชำระเงิน\n"
-                f"📧 Gmail: {order['gmail']}\n"
-                f"🎰 คุณสุ่มได้: *{order['item']}*\n"
-                f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
-            ),
-            parse_mode="Markdown"
-        )
-    else:
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=(
-                f"✅ ยืนยันการชำระเงิน\n"
-                f"📧 Gmail: {order['gmail']}\n"
-                f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
-            )
-    await context.bot.send_message(
-        chat_id=user_id,
-        text=(
-            f"✅ ยืนยันการชำระเงิน\n"
-            f"📧 Gmail: {order['gmail']}\n"
-            f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}\n"
-            f"🎉 คุณสุ่มได้: {order['item']}" if order['price'] == 20 else
-            f"✅ ยืนยันการชำระเงิน\n📧 Gmail: {order['gmail']}\n🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
-        )
-
+if order["price"] == 20:
+    text = (
+        f"✅ ยืนยันการชำระเงิน\n"
+        f"📧 Gmail: {order['gmail']}\n"
+        f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}\n"
+        f"🎉 คุณสุ่มได้: {order['item']}"
+    )
+else:
+    text = (
+        f"✅ ยืนยันการชำระเงิน\n"
+        f"📧 Gmail: {order['gmail']}\n"
+        f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
     )
 
+await context.bot.send_message(
+    chat_id=user_id,
+    text=text
+)
     # 👇 บันทึกตรงๆ ไปยัง meta.json ทันที (ไม่ผ่าน merge)
     try:
         if os.path.exists("meta.json"):
