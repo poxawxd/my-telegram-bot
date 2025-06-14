@@ -416,27 +416,29 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
         return
 
-    # ✅ สร้างข้อความตอบกลับแบบปลอดภัย
     if order["price"] == 20:
-        text = (
-            f"✅ ยืนยันการชำระเงิน\n"
-            f"📧 Gmail: {order['gmail']}\n"
-            f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}\n"
-            f"🎉 คุณสุ่มได้: {order['item']}"
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=(
+                f"✅ ยืนยันการชำระเงิน\n"
+                f"📧 Gmail: {order['gmail']}\n"
+                f"🎰 คุณสุ่มได้: *{order['item']}*\n"
+                f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
+            ),
+            parse_mode="Markdown"
         )
     else:
-        text = (
-            f"✅ ยืนยันการชำระเงิน\n"
-            f"📧 Gmail: {order['gmail']}\n"
-            f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=(
+                f"✅ ยืนยันการชำระเงิน\n"
+                f"📧 Gmail: {order['gmail']}\n"
+                f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
+            )
         )
 
-    await context.bot.send_message(
-        chat_id=user_id,
-        text=text
-    )
 
-    # 👇 บันทึก meta.json
+    # 👇 บันทึกตรงๆ ไปยัง meta.json ทันที (ไม่ผ่าน merge)
     try:
         if os.path.exists("meta.json"):
             with open("meta.json", "r") as f:
@@ -444,31 +446,63 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             current_meta = {}
 
+        # เพิ่มข้อมูลใหม่
         user_data = current_meta.get(user_id_str, {})
         user_data["total_spent"] = user_data.get("total_spent", 0) + order["price"]
         if order["price"] == 20:
             user_data["gacha_count"] = user_data.get("gacha_count", 0) + 1
         current_meta[user_id_str] = user_data
 
+        # เขียนลง meta.json
         with open("meta.json", "w") as f:
             json.dump(current_meta, f, indent=2)
         print("✅ เขียน meta.json ตรงๆ สำเร็จ")
     except Exception as e:
         print(f"❌ เขียน meta.json ล้มเหลว: {e}")
 
-    # ✅ แจ้งแอดมินในแชท
+
     await update.message.reply_text(
         f"✅ ส่งลิงก์ให้ {user_id} แล้ว (สุ่มได้: {order['item']})" if order['price'] == 20 else
         f"✅ ส่งลิงก์ให้ {user_id} แล้ว"
     )
-
-    # ✅ ล้างคำสั่ง
     del pending_orders[user_id]
+
+    # ✅ ล้างสถานะคำสั่งของผู้ใช้หลังแอดมินอนุมัติ
     if user_id in user_states:
         user_states[user_id].pop("pending_item", None)
         user_states[user_id].pop("pending_price", None)
 
-    approved_users.add(user_id)
+    approved_users.add(user_id)  # ✅ บันทึกว่าเคย approve ไปแล้ว
+
+async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.from_user.id != ADMIN_ID:
+        return
+    try:
+        user_id = int(update.message.text.split("_")[1])
+    except:
+        return
+
+    if user_id in approved_users:
+        await update.message.reply_text(f"⚠️ ออเดอร์ของ {user_id} ถูก *อนุมัติ* ไปแล้ว ไม่สามารถปฏิเสธได้")
+        return
+
+    if user_id in denied_users:
+        await update.message.reply_text(f"⚠️ ออเดอร์ของ {user_id} ถูก *ปฏิเสธ* ไปแล้ว")
+        return
+
+    await context.bot.send_message(
+        chat_id=user_id,
+        text="❌ การชำระเงินไม่ตรงยอด\n⛔ มีปัญหาโปรดติดต่อแอดมิน @ShiroiKJP"
+    )
+    await update.message.reply_text(f"❌ ปฏิเสธออเดอร์ {user_id} แล้ว")
+
+    if user_id in pending_orders:
+        del pending_orders[user_id]
+
+    if user_id in user_states:
+        user_states[user_id].pop("pending_item", None)
+        user_states[user_id].pop("pending_price", None)
+
     denied_users.add(user_id)  # บันทึกว่าเคยปฏิเสธแล้ว
 
 
@@ -506,12 +540,10 @@ async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo="https://i.postimg.cc/3JrJJDrm/image.jpg",
             caption=(
                 "🎰 ระบบสุ่มสินค้า (20฿)\n\n"
-                f"🎰 คุณสุ่มได้: *{item}*\n\n"
                 "📌 โปรดโอนเงิน 20 บาท ไปยัง PromptPay\n"
                 "`0863469001`\n\n"
                 "📤 ส่ง Gmail และสลิปมาที่แชทนี้ได้เลย\n"
                 "✅ หากเรียบร้อย ระบบจะส่งลิงก์สินค้าและแจ้งผลการสุ่ม"
-                "✅ หากเรียบร้อย ระบบจะส่งลิงก์ให้โดยอัตโนมัติ"
             ),
             parse_mode="Markdown",
             reply_markup=cancel_button
@@ -586,18 +618,16 @@ async def main():
     print("🤖 Bot is running...")
     app.run_polling()
 
-async def run_bot_forever():
-    while True:
-        try:
-            await main()
-        except Exception as e:
-            print(f"❗ Bot crashed: {e}, restarting in 5s...")
-            await asyncio.sleep(5)
-
 if __name__ == "__main__":
     nest_asyncio.apply()
     keep_alive()
     dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
     dns.resolver.default_resolver.nameservers = ['8.8.8.8', '1.1.1.1']
 
-    asyncio.run(run_bot_forever())
+    loop = asyncio.get_event_loop()
+    while True:
+        try:
+            loop.run_until_complete(main())
+        except Exception as e:
+            print(f"❗ Bot crashed: {e}, restarting in 5s...")
+            time.sleep(5)
