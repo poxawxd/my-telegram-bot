@@ -36,7 +36,7 @@ ADMIN_ID = int(os.getenv("ADMIN_ID"))
 # 🎰 ระบบสุ่ม (Gacha)
 gacha_stock = {
     "Mochi Kisaki": {"chance": 15},
-    "💼Secret Archive Drop💼": {"chance": 5},
+    "💼Secret Archive Drop💼": {"chance": 500},
     "Mochi Shimakaze": {"chance": 15},
     "Mochi White Bikini": {"chance": 120},
     "Mochi Laplus": {"chance": 20},
