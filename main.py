@@ -399,56 +399,66 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         order = pending_orders[user_id]
+
+        # --- จุดที่เพิ่มข้อความพิเศษสำหรับ Secret Archive Drop ---
+        if order['item'] == "💼Secret Archive Drop💼":
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=(
+                    "🎉 คุณสุ่มได้แฟ้มลับ!\n"
+                    "📤 โปรดส่ง Gmail และสลิปที่แชทนี้\n"
+                    "🕵️‍♂️ จากนั้นแคปรูปนี้แล้วติดต่อแอดมิน @ShiroiKJP เพื่อขอลิงก์ลับ\n\n"
+                    "✅ แอดมินจะส่งลิงก์ให้โดยตรง"
+                )
+            )
+
+        # ส่งข้อความยืนยันการชำระเงินตามปกติ
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=(
+                f"✅ ยืนยันการชำระเงิน\n"
+                f"📧 Gmail: {order['gmail']}\n"
+                f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}\n"
+                f"🎉 คุณสุ่มได้: {order['item']}" if order['price'] == 20 else
+                f"✅ ยืนยันการชำระเงิน\n📧 Gmail: {order['gmail']}\n🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
+            )
+        )
+
+        # ส่วนที่เขียน meta.json และแจ้ง admin ยังคงเหมือนเดิม
+        try:
+            if os.path.exists("meta.json"):
+                with open("meta.json", "r") as f:
+                    current_meta = json.load(f)
+            else:
+                current_meta = {}
+
+            user_data = current_meta.get(user_id_str, {})
+            user_data["total_spent"] = user_data.get("total_spent", 0) + order["price"]
+            if order["price"] == 20:
+                user_data["gacha_count"] = user_data.get("gacha_count", 0) + 1
+            current_meta[user_id_str] = user_data
+
+            with open("meta.json", "w") as f:
+                json.dump(current_meta, f, indent=2)
+            print("✅ เขียน meta.json ตรงๆ สำเร็จ")
+        except Exception as e:
+            print(f"❌ เขียน meta.json ล้มเหลว: {e}")
+
+        await update.message.reply_text(
+            f"✅ ส่งลิงก์ให้ {user_id} แล้ว (สุ่มได้: {order['item']})" if order['price'] == 20 else
+            f"✅ ส่งลิงก์ให้ {user_id} แล้ว"
+        )
+
+        del pending_orders[user_id]
+
+        if user_id in user_states:
+            user_states[user_id].pop("pending_item", None)
+            user_states[user_id].pop("pending_price", None)
+
+        approved_users.add(user_id)
+
     except Exception as e:
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
-        return
-
-    await context.bot.send_message(
-        chat_id=user_id,
-        text=(
-            f"✅ ยืนยันการชำระเงิน\n"
-            f"📧 Gmail: {order['gmail']}\n"
-            f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}\n"
-            f"🎉 คุณสุ่มได้: {order['item']}" if order['price'] == 20 else
-            f"✅ ยืนยันการชำระเงิน\n📧 Gmail: {order['gmail']}\n🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
-        )
-    )
-    
-    # 👇 บันทึกตรงๆ ไปยัง meta.json ทันที (ไม่ผ่าน merge)
-    try:
-        if os.path.exists("meta.json"):
-            with open("meta.json", "r") as f:
-                current_meta = json.load(f)
-        else:
-            current_meta = {}
-
-        # เพิ่มข้อมูลใหม่
-        user_data = current_meta.get(user_id_str, {})
-        user_data["total_spent"] = user_data.get("total_spent", 0) + order["price"]
-        if order["price"] == 20:
-            user_data["gacha_count"] = user_data.get("gacha_count", 0) + 1
-        current_meta[user_id_str] = user_data
-
-        # เขียนลง meta.json
-        with open("meta.json", "w") as f:
-            json.dump(current_meta, f, indent=2)
-        print("✅ เขียน meta.json ตรงๆ สำเร็จ")
-    except Exception as e:
-        print(f"❌ เขียน meta.json ล้มเหลว: {e}")
-
-
-    await update.message.reply_text(
-        f"✅ ส่งลิงก์ให้ {user_id} แล้ว (สุ่มได้: {order['item']})" if order['price'] == 20 else
-        f"✅ ส่งลิงก์ให้ {user_id} แล้ว"
-    )
-    del pending_orders[user_id]
-
-    # ✅ ล้างสถานะคำสั่งของผู้ใช้หลังแอดมินอนุมัติ
-    if user_id in user_states:
-        user_states[user_id].pop("pending_item", None)
-        user_states[user_id].pop("pending_price", None)
-
-    approved_users.add(user_id)  # ✅ บันทึกว่าเคย approve ไปแล้ว
 
 async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id != ADMIN_ID:
