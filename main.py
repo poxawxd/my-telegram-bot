@@ -1,5 +1,3 @@
-
-# ===== 🔧 ส่วนที่ 1: Import และการตั้งค่าเริ่มต้น =====
 import asyncio
 import time
 import dns.resolver
@@ -9,9 +7,12 @@ import threading
 import json
 import os
 
-
-# ===== 📂 ส่วนที่ 2: โหลดไฟล์ meta.json และ stock.json =====
 # โหลดข้อมูลยอดซื้อจากไฟล์
+if os.path.exists("meta.json"):
+    with open("meta.json", "r") as f:
+        user_meta = json.load(f)
+else:
+    user_meta = {}
 
 # โหลด stock จากไฟล์ stock.json
 with open("stock.json", "r", encoding="utf-8") as f:
@@ -57,8 +58,6 @@ else:
     user_meta = {}
 user_states = {}  # เก็บสถานะคำสั่งของผู้ใช้แต่ละคน
 
-
-# ===== 📱 ส่วนที่ 3: Telegram Bot – UI และเมนู =====
 main_menu = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton("🏠 เริ่มใช้งาน /start"), KeyboardButton("👤 โปรไฟล์ของฉัน")],
@@ -71,12 +70,10 @@ main_menu = ReplyKeyboardMarkup(
 
 meta_lock = threading.Lock()
 
-
-# ===== 💾 ส่วนที่ 4: ฟังก์ชันจัดการ meta.json =====
 def save_user_meta():
     import os
     print("📁 meta.json path:", os.path.abspath("meta.json"))
-
+    
     print("🧠 เรียก save_user_meta()")  # <--- เพิ่มบรรทัดนี้
 
     current_meta = {}
@@ -111,8 +108,6 @@ def save_user_meta():
     user_meta.clear()
     user_meta.update(current_meta)
 
-
-# ===== 📦 ส่วนที่ 5: ฟังก์ชันคำสั่งของผู้ใช้ =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🎉*ยินดีต้อนรับสู่ Secret_Shop!*\n\n"
@@ -162,7 +157,7 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🛍 เลือกสินค้าที่คุณสนใจ:", reply_markup=markup)
     await update.message.reply_text("📲 เลือกเมนูเพิ่มเติม:", reply_markup=main_menu)
 
-async def show_categories(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async     def show_categories(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # รวมหมวดหมู่ทั้งหมด พร้อมนับจำนวน
     from collections import defaultdict
 
@@ -182,9 +177,7 @@ async def show_categories(update: Update, context: ContextTypes.DEFAULT_TYPE):
     icon_map = {
         "Mochi": "🐰",
         "Byzeko": "🎄",
-        "Rainxang": "🕷",
-        "Lisa": "🖤",
-        "Anniekem9": "💘"    
+        "Rainxang": "🕷"
     }
 
     for cat, count in category_counts.items():
@@ -198,8 +191,6 @@ async def show_categories(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(buttons)
     )
 
-
-# ===== 🛍 ส่วนที่ 6: Callback ปุ่มต่าง ๆ =====
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -239,7 +230,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "กรุณากดยกเลิกคำสั่งก่อน โดยพิมพ์ /cancel หรือกดปุ่ม ❌"
             )
             return
-
+            
         item = data.replace("select_", "")
         user_data["pending_item"] = item
         user_data["pending_price"] = stock[item]["price"]
@@ -273,7 +264,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "gacha":
         await gacha_start(update, context)
         return
-
+        
     elif data.startswith("category_"):
         cat = data.replace("category_", "")
         items = {k: v for k, v in stock.items() if v["category"] == cat}
@@ -300,8 +291,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=buy_button
             )    
 
-
-# ===== 💬 ส่วนที่ 7: Message Handler =====
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     user_id = update.message.from_user.id
@@ -399,8 +388,6 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text("📨 ส่งสลิปแล้ว กรุณารอแอดมินตรวจสอบ")
 
-
-# ===== ✅ ส่วนที่ 8: อนุมัติ / ปฏิเสธออเดอร์ =====
 async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id != ADMIN_ID:
         return
@@ -412,37 +399,23 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         order = pending_orders[user_id]
+    except Exception as e:
+        await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
+        return
 
-        item_name = order["item"]
-        item_data = stock.get(item_name, {})
-        item_url = item_data.get("url")
-
-        if not item_url:
-            await update.message.reply_text(f"❌ ไม่พบลิงก์สินค้า '{item_name}' ใน stock.json")
-            return
-
-        # ถ้า item อยู่ใน gacha_stock ถือว่าเป็นของที่สุ่มได้
-        if item_name in gacha_stock:
-            text = (
-                f"✅ ยืนยันการชำระเงิน (สุ่ม 20 บาท)\n"
-                f"📧 Gmail: {order['gmail']}\n"
-                f"🎰 คุณสุ่มได้: *{item_name}*\n"
-                f"🔗 ลิงก์สินค้า: {item_url}"
-            )
-        else:
-            text = (
-                f"✅ ยืนยันการชำระเงิน\n"
-                f"📧 Gmail: {order['gmail']}\n"
-                f"🔗 ลิงก์สินค้า: {item_url}"
-            )
-
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=text,
-            parse_mode="Markdown"
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=(
+            f"✅ ยืนยันการชำระเงิน\n"
+            f"📧 Gmail: {order['gmail']}\n"
+            f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}\n"
+            f"🎉 คุณสุ่มได้: {order['item']}" if order['price'] == 20 else
+            f"✅ ยืนยันการชำระเงิน\n📧 Gmail: {order['gmail']}\n🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
         )
-
-        # 👇 บันทึกตรงๆ ไปยัง meta.json ทันที (ไม่ผ่าน merge)
+    )
+    
+    # 👇 บันทึกตรงๆ ไปยัง meta.json ทันที (ไม่ผ่าน merge)
+    try:
         if os.path.exists("meta.json"):
             with open("meta.json", "r") as f:
                 current_meta = json.load(f)
@@ -457,6 +430,25 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         current_meta[user_id_str] = user_data
 
         # เขียนลง meta.json
+        with open("meta.json", "w") as f:
+            json.dump(current_meta, f, indent=2)
+        print("✅ เขียน meta.json ตรงๆ สำเร็จ")
+    except Exception as e:
+        print(f"❌ เขียน meta.json ล้มเหลว: {e}")
+
+
+    await update.message.reply_text(
+        f"✅ ส่งลิงก์ให้ {user_id} แล้ว (สุ่มได้: {order['item']})" if order['price'] == 20 else
+        f"✅ ส่งลิงก์ให้ {user_id} แล้ว"
+    )
+    del pending_orders[user_id]
+
+    # ✅ ล้างสถานะคำสั่งของผู้ใช้หลังแอดมินอนุมัติ
+    if user_id in user_states:
+        user_states[user_id].pop("pending_item", None)
+        user_states[user_id].pop("pending_price", None)
+
+    approved_users.add(user_id)  # ✅ บันทึกว่าเคย approve ไปแล้ว
 
 async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id != ADMIN_ID:
@@ -476,7 +468,7 @@ async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=user_id,
-        text="❌ การชำระเงินไม่ตรงยอด\n⛔ มีปัญหาโปรดติดต่อแอดมิน @ShiroiKJP"
+        text="❌ การชำระเงินไม่ตรงยอด\n⛔ ร้านขอสงวนสิทธิ์ไม่คืนเงินที่โอนเล่น"
     )
     await update.message.reply_text(f"❌ ปฏิเสธออเดอร์ {user_id} แล้ว")
 
@@ -489,8 +481,6 @@ async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     denied_users.add(user_id)  # บันทึกว่าเคยปฏิเสธแล้ว
 
-
-# ===== 🎰 ส่วนที่ 9: ระบบสุ่มสินค้า (Gacha) =====
 async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
         user_data = user_states.setdefault(user_id, {})
@@ -527,7 +517,7 @@ async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "📌 โปรดโอนเงิน 20 บาท ไปยัง PromptPay\n"
                 "`0863469001`\n\n"
                 "📤 ส่ง Gmail และสลิปมาที่แชทนี้ได้เลย\n"
-                "✅ หากเรียบร้อย ระบบจะส่งลิงก์สินค้าและแจ้งผลการสุ่ม"
+                "✅ หากเรียบร้อย ระบบจะส่งลิงก์ให้โดยอัตโนมัติ"
             ),
             parse_mode="Markdown",
             reply_markup=cancel_button
@@ -581,8 +571,6 @@ async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
             return  # จบการทำงานตรงนี้ ไม่ต้องแสดงข้อความสุ่มปกติ
 
-
-# ===== 🚀 ส่วนที่ 10: เริ่มต้นบอท Telegram =====
 async def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
@@ -603,7 +591,7 @@ async def main():
     app.run_polling()
 
 if __name__ == "__main__":
-    nest_asyncio.apply()
+    nest_asyncio.apply()c
     keep_alive()
     dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
     dns.resolver.default_resolver.nameservers = ['8.8.8.8', '1.1.1.1']
