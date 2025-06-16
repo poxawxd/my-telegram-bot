@@ -30,6 +30,18 @@ from telegram.ext import (
 )
 from keep_alive import keep_alive
 
+import os
+from telegram import Bot
+
+TOKEN = os.getenv("BOT_TOKEN")  # ดึง token จาก environment variable
+
+if TOKEN is None:
+    print("❌ BOT_TOKEN ยังไม่ถูกตั้งค่าใน environment variables")
+else:
+    bot = Bot(token=TOKEN)
+    bot.delete_webhook()
+    print("✅ ล้าง webhook เรียบร้อยแล้ว")
+
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
