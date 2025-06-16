@@ -74,8 +74,6 @@ meta_lock = threading.Lock()
 
 from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime
-import time
-import pytz
 
 def generate_receipt(user_id, gmail, item, price):
     img = Image.new("RGB", (600, 300), color=(255, 255, 255))
@@ -114,10 +112,9 @@ def generate_receipt(user_id, gmail, item, price):
 
 def save_user_meta():
     import os
-    import json
-
     print("📁 meta.json path:", os.path.abspath("meta.json"))
-    print("🧠 เรียก save_user_meta()")
+    
+    print("🧠 เรียก save_user_meta()")  # <--- เพิ่มบรรทัดนี้
 
     current_meta = {}
     if os.path.exists("meta.json"):
@@ -125,7 +122,7 @@ def save_user_meta():
             with open("meta.json", "r") as f:
                 current_meta = json.load(f)
         except Exception:
-            print("❌ อ่าน meta.json ไม่ได้")
+            print("❌ อ่าน meta.json ไม่ได้")  # เพิ่มตรงนี้ด้วย
 
     # รวมค่าใหม่เข้าไป
     for uid, new_data in user_meta.items():
@@ -140,15 +137,14 @@ def save_user_meta():
             old_data[k] = v
         current_meta[str(uid)] = old_data
 
-    # บันทึกไฟล์ meta.json
     try:
         with open("meta.json", "w") as f:
             json.dump(current_meta, f, indent=2)
-        print("✅ meta.json อัปเดตแล้ว")
+        print("✅ meta.json อัปเดตแล้ว")  # <--- บรรทัดนี้สำคัญ
     except Exception as e:
         print(f"❌ เขียน meta.json ไม่ได้: {e}")
 
-    # อัปเดตในตัวแปร user_meta
+    # อัปเดตในตัวแปร
     user_meta.clear()
     user_meta.update(current_meta)
 
@@ -249,9 +245,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # ✅ ลบข้อความทั้งหมดที่จำไว้
         for msg_id in user_data.get("message_ids", []):
-            
+            try:
                 await context.bot.delete_message(chat_id=query.message.chat_id, message_id=msg_id)
-            
+            except Exception as e:
                 print(f"❌ ลบข้อความ {msg_id} ไม่สำเร็จ: {e}")
 
         # ลบ message_ids หลังลบแล้ว
@@ -436,78 +432,81 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id != ADMIN_ID:
         return
 
-    user_id = int(update.message.text.split("_")[1])
-    user_id_str = str(user_id)
+    try:
+        user_id = int(update.message.text.split("_")[1])
+        user_id_str = str(user_id)
 
-    # ✅ เช็กว่า user มีออเดอร์ใน pending หรือไม่
-    if user_id not in pending_orders:
-        await update.message.reply_text(
-            f"⚠️ ไม่มีออเดอร์ที่รออนุมัติจาก {user_id} หรืออาจอนุมัติไปแล้ว"
-        )
-        return
+        # ✅ เช็กว่า user มีออเดอร์ใน pending หรือไม่
+        if user_id not in pending_orders:
+            await update.message.reply_text(
+                f"⚠️ ไม่มีออเดอร์ที่รออนุมัติจาก {user_id} หรืออาจอนุมัติไปแล้ว"
+            )
+            return
 
-    order = pending_orders[user_id]
+        order = pending_orders[user_id]
 
-    # --- จุดที่เพิ่มข้อความพิเศษสำหรับ Secret Archive Drop ---
-    if order['item'] == "💼Secret Archive Drop💼":
+        # --- จุดที่เพิ่มข้อความพิเศษสำหรับ Secret Archive Drop ---
+        if order['item'] == "💼Secret Archive Drop💼":
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=(
+                    "🎉 คุณสุ่มได้แฟ้มลับ!\n"
+                    "📤 โปรดส่ง Gmail และสลิปที่แชทนี้\n"
+                    "🕵️‍♂️ จากนั้นแคปรูปนี้แล้วติดต่อแอดมิน @ShiroiKJP เพื่อขอลิงก์ลับ\n\n"
+                    "✅ แอดมินจะส่งลิงก์ให้โดยตรง"
+                )
+            )
+
+        # ส่งข้อความยืนยันการชำระเงินตามปกติ
         await context.bot.send_message(
             chat_id=user_id,
             text=(
-                "🎉 คุณสุ่มได้แฟ้มลับ!\n"
-                "📤 โปรดส่ง Gmail และสลิปที่แชทนี้\n"
-                "🕵️‍♂️ จากนั้นแคปรูปนี้แล้วติดต่อแอดมิน @ShiroiKJP เพื่อขอลิงก์ลับ\n\n"
-                "✅ แอดมินจะส่งลิงก์ให้โดยตรง"
+                f"✅ ยืนยันการชำระเงิน\n"
+                f"📧 Gmail: {order['gmail']}\n"
+                f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}\n"
+                f"🎉 คุณสุ่มได้: {order['item']}" if order['price'] == 20 else
+                f"✅ ยืนยันการชำระเงิน\n📧 Gmail: {order['gmail']}\n🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
             )
         )
 
-    # ส่งข้อความยืนยันการชำระเงินตามปกติ
-    await context.bot.send_message(
-        chat_id=user_id,
-        text=(
-            f"✅ ยืนยันการชำระเงิน\n"
-            f"📧 Gmail: {order['gmail']}\n"
-            f"🔗 ลิงก์สินค้า: {stock[order['item']]['url']}\n"
-            f"🎉 คุณสุ่มได้: {order['item']}" if order['price'] == 20 else
-            f"✅ ยืนยันการชำระเงิน\n📧 Gmail: {order['gmail']}\n🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
+        # ✅ สร้างใบเสร็จ
+        receipt_path = generate_receipt(
+            user_id=user_id,
+            gmail=order["gmail"],
+            item=order["item"],
+            price=order["price"]
         )
-    )
 
-    # ✅ สร้างใบเสร็จ
-    receipt_path = generate_receipt(
-        user_id=user_id,
-        gmail=order["gmail"],
-        item=order["item"],
-        price=order["price"]
-    )
-
-    try:
-        with open(receipt_path, "rb") as photo:
-            await context.bot.send_photo(
-                chat_id=user_id,
-                photo=photo,
-                caption="🧾 ใบเสร็จของคุณ (เก็บไว้เป็นหลักฐานนะครับ)"
-            )
-        os.remove(receipt_path)
-    except Exception as e:
-        print(f"❌ ส่งใบเสร็จล้มเหลว: {e}")
+        try:
+            with open(receipt_path, "rb") as photo:
+                await context.bot.send_photo(
+                    chat_id=user_id,
+                    photo=photo,
+                    caption="🧾 ใบเสร็จของคุณ (เก็บไว้เป็นหลักฐานนะครับ)"
+                )
+            os.remove(receipt_path)
+        except Exception as e:
+            print(f"❌ ส่งใบเสร็จล้มเหลว: {e}")
 
         # ✅ อัปเดต meta.json
-    try:
-        if os.path.exists("meta.json"):
-            with open("meta.json", "r") as f:
-                current_meta = json.load(f)
-        else:
-            current_meta = {}
+        try:
+            if os.path.exists("meta.json"):
+                with open("meta.json", "r") as f:
+                    current_meta = json.load(f)
+            else:
+                current_meta = {}
 
-        user_data = current_meta.get(user_id_str, {})
-        user_data["total_spent"] = user_data.get("total_spent", 0) + order["price"]
-        if order["price"] == 20:
-            user_data["gacha_count"] = user_data.get("gacha_count", 0) + 1
-        current_meta[user_id_str] = user_data
+            user_data = current_meta.get(user_id_str, {})
+            user_data["total_spent"] = user_data.get("total_spent", 0) + order["price"]
+            if order["price"] == 20:
+                user_data["gacha_count"] = user_data.get("gacha_count", 0) + 1
+            current_meta[user_id_str] = user_data
 
-        with open("meta.json", "w") as f:
-            json.dump(current_meta, f, indent=2)
-        print("✅ เขียน meta.json สำเร็จ")
+            with open("meta.json", "w") as f:
+                json.dump(current_meta, f, indent=2)
+            print("✅ เขียน meta.json สำเร็จ")
+        except Exception as e:
+            print(f"❌ เขียน meta.json ล้มเหลว: {e}")
 
         await update.message.reply_text(
             f"✅ ส่งลิงก์ให้ {user_id} แล้ว (สุ่มได้: {order['item']})" if order['price'] == 20 else
@@ -521,23 +520,22 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_states[user_id].pop("pending_price", None)
 
     except Exception as e:
-        print(f"❌ เขียน meta.json ล้มเหลว: {e}")
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
 
 async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id != ADMIN_ID:
         return
 
-    user_id = int(update.message.text.split("_")[1])
-
-    # ✅ เช็กว่ามีออเดอร์อยู่หรือไม่
-    if user_id not in pending_orders:
-        await update.message.reply_text(
-            f"⚠️ ไม่มีออเดอร์ที่รอพิจารณาสำหรับ {user_id}"
-        )
-        return
-
     try:
+        user_id = int(update.message.text.split("_")[1])
+
+        # ✅ เช็กว่ามีออเดอร์อยู่หรือไม่
+        if user_id not in pending_orders:
+            await update.message.reply_text(
+                f"⚠️ ไม่มีออเดอร์ที่รอพิจารณาสำหรับ {user_id}"
+            )
+            return
+
         # ❌ แจ้งลูกค้า
         await context.bot.send_message(
             chat_id=user_id,
@@ -555,72 +553,72 @@ async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
 
 async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    user_data = user_states.setdefault(user_id, {})
+        user_id = update.effective_user.id
+        user_data = user_states.setdefault(user_id, {})
 
-    if user_data.get("pending_item"):
-        await update.effective_message.reply_text(
-            "⚠️ คุณมีคำสั่งที่ยังไม่เสร็จ กรุณากดยกเลิกคำสั่งก่อน โดยพิมพ์ /cancel หรือกดปุ่ม ❌"
-        )
-        return
+        if user_data.get("pending_item"):
+            await update.effective_message.reply_text(
+                "⚠️ คุณมีคำสั่งที่ยังไม่เสร็จ กรุณากดยกเลิกคำสั่งก่อน โดยพิมพ์ /cancel หรือกดปุ่ม ❌"
+            )
+            return
 
-    # 🎰 สุ่มสินค้า
-    item_list = list(gacha_stock.keys())
-    weight_list = [gacha_stock[k]["chance"] for k in item_list]
-    item = random.choices(population=item_list, weights=weight_list, k=1)[0]
+        # 🎰 สุ่มสินค้า
+        item_list = list(gacha_stock.keys())
+        weight_list = [gacha_stock[k]["chance"] for k in item_list]
+        item = random.choices(population=item_list, weights=weight_list, k=1)[0]
 
-    user_data["pending_item"] = item
-    user_data["pending_price"] = 20
+        user_data["pending_item"] = item
+        user_data["pending_price"] = 20
 
-    uid_str = str(user_id)
-    if uid_str not in user_meta:
-        user_meta[uid_str] = {}
-    user_meta[uid_str]["new_gacha"] = user_meta[uid_str].get("new_gacha", 0) + 1
-    save_user_meta()  # บันทึกลงไฟล์ทันที
+        uid_str = str(user_id)
+        if uid_str not in user_meta:
+            user_meta[uid_str] = {}
+        user_meta[uid_str]["new_gacha"] = user_meta[uid_str].get("new_gacha", 0) + 1
+        save_user_meta()  # บันทึกลงไฟล์ทันที
 
-    cancel_button = InlineKeyboardMarkup([
-        [InlineKeyboardButton("❌ ยกเลิกคำสั่ง", callback_data="cancel")]
-    ])
+        cancel_button = InlineKeyboardMarkup([
+            [InlineKeyboardButton("❌ ยกเลิกคำสั่ง", callback_data="cancel")]
+        ])
 
-    # ✅ ส่งภาพสุ่ม
-    msg1 = await update.effective_message.reply_photo(
-        photo="https://i.postimg.cc/3JrJJDrm/image.jpg",
-        caption=(
-            "🎰 ระบบสุ่มสินค้า (20฿)\n\n"
-            "📌 โปรดโอนเงิน 20 บาท ไปยัง PromptPay\n"
-            "`0863469001`\n\n"
-            "📤 ส่ง Gmail และสลิปมาที่แชทนี้ได้เลย\n"
-            "✅ หากเรียบร้อย ระบบจะส่งลิงก์ให้โดยอัตโนมัติ"
-        ),
-        parse_mode="Markdown",
-        reply_markup=cancel_button
-    )
-
-    # ✅ ส่ง QR
-    msg2 = await update.effective_message.reply_photo(
-        photo="https://i.postimg.cc/L6z2ywLc/qr-code.jpg",
-        caption="📲 สแกน QR เพื่อโอนเงิน"
-    )
-
-    user_data["message_ids"] = [msg1.message_id, msg2.message_id]
-
-    # 📦 ถ้าสุ่มได้ Secret Drop
-    if item == "💼Secret Archive Drop💼":
-        await update.effective_message.reply_photo(
-            photo="https://i.postimg.cc/tCZ2hxVT/download.jpg",
+        # ✅ ส่งภาพสุ่ม
+        msg1 = await update.effective_message.reply_photo(
+            photo="https://i.postimg.cc/3JrJJDrm/image.jpg",
             caption=(
-                f"🎁 คุณสุ่มได้: *{item}*\n\n"
-                "📌 คุณคือ 1 ในไม่กี่คนที่โชคดีได้แฟ้มลับ!\n"
-                "📤 ส่ง Gmail และสลิปมาที่แชทนี้\n"
-                "🕵️‍♂️ จากนั้นโปรดแคปรูปนี้แล้วติดต่อแอดมิน @ShiroiKJP เพื่อขอลิงก์ลับ\n\n"
-                "✅ แอดมินจะส่งลิงก์ให้โดยตรง"
+                "🎰 ระบบสุ่มสินค้า (20฿)\n\n"
+                "📌 โปรดโอนเงิน 20 บาท ไปยัง PromptPay\n"
+                "`0863469001`\n\n"
+                "📤 ส่ง Gmail และสลิปมาที่แชทนี้ได้เลย\n"
+                "✅ หากเรียบร้อย ระบบจะส่งลิงก์ให้โดยอัตโนมัติ"
             ),
             parse_mode="Markdown",
             reply_markup=cancel_button
         )
 
-        # แจ้งแอดมิน
-        await context.bot.send_message(
+        # ✅ ส่ง QR
+        msg2 = await update.effective_message.reply_photo(
+            photo="https://i.postimg.cc/L6z2ywLc/qr-code.jpg",
+            caption="📲 สแกน QR เพื่อโอนเงิน"
+        )
+
+        user_data["message_ids"] = [msg1.message_id, msg2.message_id]
+
+        # 📦 ถ้าสุ่มได้ Secret Drop
+        if item == "💼Secret Archive Drop💼":
+            await update.effective_message.reply_photo(
+                photo="https://i.postimg.cc/tCZ2hxVT/download.jpg",
+                caption=(
+                    f"🎁 คุณสุ่มได้: *{item}*\n\n"
+                    "📌 คุณคือ 1 ในไม่กี่คนที่โชคดีได้แฟ้มลับ!\n"
+                    "📤 ส่ง Gmail และสลิปมาที่แชทนี้\n"
+                    "🕵️‍♂️ จากนั้นโปรดแคปรูปนี้แล้วติดต่อแอดมิน @ShiroiKJP เพื่อขอลิงก์ลับ\n\n"
+                    "✅ แอดมินจะส่งลิงก์ให้โดยตรง"
+                ),
+                parse_mode="Markdown",
+                reply_markup=cancel_button
+            )
+
+# แจ้งแอดมิน
+            await context.bot.send_message(
             chat_id=ADMIN_ID,
             text=(
                 f"📥 แจ้งเตือน!\n"
@@ -630,13 +628,10 @@ async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ),
             parse_mode="Markdown"
         )
-        return  # จบการทำงานตรงนี้ ไม่ต้องแสดงข้อความสุ่มปกติ
+            return  # จบการทำงานตรงนี้ ไม่ต้องแสดงข้อความสุ่มปกติ
 
 async def main():
-    global telegram_app
-    telegram_app = ApplicationBuilder().token(TOKEN).build()
-    ...
-    return telegram_app
+    app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("menu", menu))
@@ -652,27 +647,18 @@ async def main():
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
     print("🤖 Bot is running...")
-
-from fastapi import FastAPI, Request
-import uvicorn
-
-fastapi_app = FastAPI()
-telegram_app = None
-
-@fastapi_app.post("/")
-async def webhook(req: Request):
-    data = await req.json()
-    await telegram_app.update_queue.put(data)
-    return {"ok": True}
-
-async def launch():
-    global telegram_app
-    telegram_app = await main()
+    app.run_polling()
 
 if __name__ == "__main__":
-    import nest_asyncio
-    import uvicorn
-
     nest_asyncio.apply()
-    asyncio.run(launch())  # launch คือ async ที่เรียก main()
-    uvicorn.run("telegram_webhook_full:fastapi_app", host="0.0.0.0", port=10000)
+    keep_alive()
+    dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
+    dns.resolver.default_resolver.nameservers = ['8.8.8.8', '1.1.1.1']
+
+    loop = asyncio.get_event_loop()
+    while True:
+        try:
+            loop.run_until_complete(main())
+        except Exception as e:
+            print(f"❗ Bot crashed: {e}, restarting in 5s...")
+            time.sleep(5)
