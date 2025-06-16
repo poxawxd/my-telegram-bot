@@ -525,25 +525,28 @@ async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     try:
         user_id = int(update.message.text.split("_")[1])
-    except:
-        return
 
-    if user_id not in pending_orders:
-        await update.message.reply_text(f"⚠️ ไม่มีออเดอร์ที่รอพิจารณาสำหรับ {user_id}")
-        return
+        # ✅ ป้องกันกดซ้ำ
+        if user_id not in pending_orders:
+            await update.message.reply_text(f"⚠️ ไม่มีออเดอร์ที่รอพิจารณาสำหรับ {user_id}")
+            return
 
-    await context.bot.send_message(
-        chat_id=user_id,
-        text="❌ การชำระเงินไม่ตรงยอด\n⛔ ร้านขอสงวนสิทธิ์ไม่คืนเงินที่โอนเล่น"
-    )
-    await update.message.reply_text(f"❌ ปฏิเสธออเดอร์ {user_id} แล้ว")
+        # ⛔ แจ้งลูกค้า
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ การชำระเงินไม่ตรงยอด\n⛔ ร้านขอสงวนสิทธิ์ไม่คืนเงินที่โอนเล่น"
+        )
+        await update.message.reply_text(f"❌ ปฏิเสธออเดอร์ {user_id} แล้ว")
 
-    if user_id in pending_orders:
+        # 🧹 ลบออเดอร์และสถานะ
         del pending_orders[user_id]
 
-    if user_id in user_states:
-        user_states[user_id].pop("pending_item", None)
-        user_states[user_id].pop("pending_price", None)
+        if user_id in user_states:
+            user_states[user_id].pop("pending_item", None)
+            user_states[user_id].pop("pending_price", None)
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
 
 async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
