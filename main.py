@@ -488,24 +488,22 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print(f"❌ ส่งใบเสร็จล้มเหลว: {e}")
 
         # ✅ อัปเดต meta.json
-        
-            if os.path.exists("meta.json"):
-                with open("meta.json", "r") as f:
-                    current_meta = json.load(f)
-            else:
-                current_meta = {}
+    try:
+        if os.path.exists("meta.json"):
+            with open("meta.json", "r") as f:
+                current_meta = json.load(f)
+        else:
+            current_meta = {}
 
-            user_data = current_meta.get(user_id_str, {})
-            user_data["total_spent"] = user_data.get("total_spent", 0) + order["price"]
-            if order["price"] == 20:
-                user_data["gacha_count"] = user_data.get("gacha_count", 0) + 1
-            current_meta[user_id_str] = user_data
+        user_data = current_meta.get(user_id_str, {})
+        user_data["total_spent"] = user_data.get("total_spent", 0) + order["price"]
+        if order["price"] == 20:
+            user_data["gacha_count"] = user_data.get("gacha_count", 0) + 1
+        current_meta[user_id_str] = user_data
 
-            with open("meta.json", "w") as f:
-                json.dump(current_meta, f, indent=2)
-            print("✅ เขียน meta.json สำเร็จ")
-        
-            print(f"❌ เขียน meta.json ล้มเหลว: {e}")
+        with open("meta.json", "w") as f:
+            json.dump(current_meta, f, indent=2)
+        print("✅ เขียน meta.json สำเร็จ")
 
         await update.message.reply_text(
             f"✅ ส่งลิงก์ให้ {user_id} แล้ว (สุ่มได้: {order['item']})" if order['price'] == 20 else
@@ -518,23 +516,24 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_states[user_id].pop("pending_item", None)
             user_states[user_id].pop("pending_price", None)
 
-    
+    except Exception as e:
+        print(f"❌ เขียน meta.json ล้มเหลว: {e}")
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
 
 async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id != ADMIN_ID:
         return
 
-    
-        user_id = int(update.message.text.split("_")[1])
+    user_id = int(update.message.text.split("_")[1])
 
-        # ✅ เช็กว่ามีออเดอร์อยู่หรือไม่
-        if user_id not in pending_orders:
-            await update.message.reply_text(
-                f"⚠️ ไม่มีออเดอร์ที่รอพิจารณาสำหรับ {user_id}"
-            )
-            return
+    # ✅ เช็กว่ามีออเดอร์อยู่หรือไม่
+    if user_id not in pending_orders:
+        await update.message.reply_text(
+            f"⚠️ ไม่มีออเดอร์ที่รอพิจารณาสำหรับ {user_id}"
+        )
+        return
 
+    try:
         # ❌ แจ้งลูกค้า
         await context.bot.send_message(
             chat_id=user_id,
@@ -548,76 +547,76 @@ async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_states[user_id].pop("pending_item", None)
             user_states[user_id].pop("pending_price", None)
 
-    
+    except Exception as e:
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
 
 async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        user_id = update.effective_user.id
-        user_data = user_states.setdefault(user_id, {})
+    user_id = update.effective_user.id
+    user_data = user_states.setdefault(user_id, {})
 
-        if user_data.get("pending_item"):
-            await update.effective_message.reply_text(
-                "⚠️ คุณมีคำสั่งที่ยังไม่เสร็จ กรุณากดยกเลิกคำสั่งก่อน โดยพิมพ์ /cancel หรือกดปุ่ม ❌"
-            )
-            return
+    if user_data.get("pending_item"):
+        await update.effective_message.reply_text(
+            "⚠️ คุณมีคำสั่งที่ยังไม่เสร็จ กรุณากดยกเลิกคำสั่งก่อน โดยพิมพ์ /cancel หรือกดปุ่ม ❌"
+        )
+        return
 
-        # 🎰 สุ่มสินค้า
-        item_list = list(gacha_stock.keys())
-        weight_list = [gacha_stock[k]["chance"] for k in item_list]
-        item = random.choices(population=item_list, weights=weight_list, k=1)[0]
+    # 🎰 สุ่มสินค้า
+    item_list = list(gacha_stock.keys())
+    weight_list = [gacha_stock[k]["chance"] for k in item_list]
+    item = random.choices(population=item_list, weights=weight_list, k=1)[0]
 
-        user_data["pending_item"] = item
-        user_data["pending_price"] = 20
+    user_data["pending_item"] = item
+    user_data["pending_price"] = 20
 
-        uid_str = str(user_id)
-        if uid_str not in user_meta:
-            user_meta[uid_str] = {}
-        user_meta[uid_str]["new_gacha"] = user_meta[uid_str].get("new_gacha", 0) + 1
-        save_user_meta()  # บันทึกลงไฟล์ทันที
+    uid_str = str(user_id)
+    if uid_str not in user_meta:
+        user_meta[uid_str] = {}
+    user_meta[uid_str]["new_gacha"] = user_meta[uid_str].get("new_gacha", 0) + 1
+    save_user_meta()  # บันทึกลงไฟล์ทันที
 
-        cancel_button = InlineKeyboardMarkup([
-            [InlineKeyboardButton("❌ ยกเลิกคำสั่ง", callback_data="cancel")]
-        ])
+    cancel_button = InlineKeyboardMarkup([
+        [InlineKeyboardButton("❌ ยกเลิกคำสั่ง", callback_data="cancel")]
+    ])
 
-        # ✅ ส่งภาพสุ่ม
-        msg1 = await update.effective_message.reply_photo(
-            photo="https://i.postimg.cc/3JrJJDrm/image.jpg",
+    # ✅ ส่งภาพสุ่ม
+    msg1 = await update.effective_message.reply_photo(
+        photo="https://i.postimg.cc/3JrJJDrm/image.jpg",
+        caption=(
+            "🎰 ระบบสุ่มสินค้า (20฿)\n\n"
+            "📌 โปรดโอนเงิน 20 บาท ไปยัง PromptPay\n"
+            "`0863469001`\n\n"
+            "📤 ส่ง Gmail และสลิปมาที่แชทนี้ได้เลย\n"
+            "✅ หากเรียบร้อย ระบบจะส่งลิงก์ให้โดยอัตโนมัติ"
+        ),
+        parse_mode="Markdown",
+        reply_markup=cancel_button
+    )
+
+    # ✅ ส่ง QR
+    msg2 = await update.effective_message.reply_photo(
+        photo="https://i.postimg.cc/L6z2ywLc/qr-code.jpg",
+        caption="📲 สแกน QR เพื่อโอนเงิน"
+    )
+
+    user_data["message_ids"] = [msg1.message_id, msg2.message_id]
+
+    # 📦 ถ้าสุ่มได้ Secret Drop
+    if item == "💼Secret Archive Drop💼":
+        await update.effective_message.reply_photo(
+            photo="https://i.postimg.cc/tCZ2hxVT/download.jpg",
             caption=(
-                "🎰 ระบบสุ่มสินค้า (20฿)\n\n"
-                "📌 โปรดโอนเงิน 20 บาท ไปยัง PromptPay\n"
-                "`0863469001`\n\n"
-                "📤 ส่ง Gmail และสลิปมาที่แชทนี้ได้เลย\n"
-                "✅ หากเรียบร้อย ระบบจะส่งลิงก์ให้โดยอัตโนมัติ"
+                f"🎁 คุณสุ่มได้: *{item}*\n\n"
+                "📌 คุณคือ 1 ในไม่กี่คนที่โชคดีได้แฟ้มลับ!\n"
+                "📤 ส่ง Gmail และสลิปมาที่แชทนี้\n"
+                "🕵️‍♂️ จากนั้นโปรดแคปรูปนี้แล้วติดต่อแอดมิน @ShiroiKJP เพื่อขอลิงก์ลับ\n\n"
+                "✅ แอดมินจะส่งลิงก์ให้โดยตรง"
             ),
             parse_mode="Markdown",
             reply_markup=cancel_button
         )
 
-        # ✅ ส่ง QR
-        msg2 = await update.effective_message.reply_photo(
-            photo="https://i.postimg.cc/L6z2ywLc/qr-code.jpg",
-            caption="📲 สแกน QR เพื่อโอนเงิน"
-        )
-
-        user_data["message_ids"] = [msg1.message_id, msg2.message_id]
-
-        # 📦 ถ้าสุ่มได้ Secret Drop
-        if item == "💼Secret Archive Drop💼":
-            await update.effective_message.reply_photo(
-                photo="https://i.postimg.cc/tCZ2hxVT/download.jpg",
-                caption=(
-                    f"🎁 คุณสุ่มได้: *{item}*\n\n"
-                    "📌 คุณคือ 1 ในไม่กี่คนที่โชคดีได้แฟ้มลับ!\n"
-                    "📤 ส่ง Gmail และสลิปมาที่แชทนี้\n"
-                    "🕵️‍♂️ จากนั้นโปรดแคปรูปนี้แล้วติดต่อแอดมิน @ShiroiKJP เพื่อขอลิงก์ลับ\n\n"
-                    "✅ แอดมินจะส่งลิงก์ให้โดยตรง"
-                ),
-                parse_mode="Markdown",
-                reply_markup=cancel_button
-            )
-
-# แจ้งแอดมิน
-            await context.bot.send_message(
+        # แจ้งแอดมิน
+        await context.bot.send_message(
             chat_id=ADMIN_ID,
             text=(
                 f"📥 แจ้งเตือน!\n"
@@ -627,7 +626,7 @@ async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ),
             parse_mode="Markdown"
         )
-            return  # จบการทำงานตรงนี้ ไม่ต้องแสดงข้อความสุ่มปกติ
+        return  # จบการทำงานตรงนี้ ไม่ต้องแสดงข้อความสุ่มปกติ
 
 async def main():
     global telegram_app
