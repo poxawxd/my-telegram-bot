@@ -79,7 +79,7 @@ def generate_receipt(user_id, gmail, item, price):
     img = Image.new("RGB", (600, 300), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
 
-    try:
+    
         font = ImageFont.truetype("arial.ttf", 18)
     except:
         font = ImageFont.load_default()
@@ -118,7 +118,7 @@ def save_user_meta():
 
     current_meta = {}
     if os.path.exists("meta.json"):
-        try:
+        
             with open("meta.json", "r") as f:
                 current_meta = json.load(f)
         except Exception:
@@ -137,11 +137,11 @@ def save_user_meta():
             old_data[k] = v
         current_meta[str(uid)] = old_data
 
-    try:
+    
         with open("meta.json", "w") as f:
             json.dump(current_meta, f, indent=2)
         print("✅ meta.json อัปเดตแล้ว")  # <--- บรรทัดนี้สำคัญ
-    except Exception as e:
+    
         print(f"❌ เขียน meta.json ไม่ได้: {e}")
 
     # อัปเดตในตัวแปร
@@ -245,9 +245,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # ✅ ลบข้อความทั้งหมดที่จำไว้
         for msg_id in user_data.get("message_ids", []):
-            try:
+            
                 await context.bot.delete_message(chat_id=query.message.chat_id, message_id=msg_id)
-            except Exception as e:
+            
                 print(f"❌ ลบข้อความ {msg_id} ไม่สำเร็จ: {e}")
 
         # ลบ message_ids หลังลบแล้ว
@@ -432,7 +432,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id != ADMIN_ID:
         return
 
-    try:
+    
         user_id = int(update.message.text.split("_")[1])
         user_id_str = str(user_id)
 
@@ -477,7 +477,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             price=order["price"]
         )
 
-        try:
+        
             with open(receipt_path, "rb") as photo:
                 await context.bot.send_photo(
                     chat_id=user_id,
@@ -485,11 +485,11 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     caption="🧾 ใบเสร็จของคุณ (เก็บไว้เป็นหลักฐานนะครับ)"
                 )
             os.remove(receipt_path)
-        except Exception as e:
+        
             print(f"❌ ส่งใบเสร็จล้มเหลว: {e}")
 
         # ✅ อัปเดต meta.json
-        try:
+        
             if os.path.exists("meta.json"):
                 with open("meta.json", "r") as f:
                     current_meta = json.load(f)
@@ -505,7 +505,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             with open("meta.json", "w") as f:
                 json.dump(current_meta, f, indent=2)
             print("✅ เขียน meta.json สำเร็จ")
-        except Exception as e:
+        
             print(f"❌ เขียน meta.json ล้มเหลว: {e}")
 
         await update.message.reply_text(
@@ -519,14 +519,14 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_states[user_id].pop("pending_item", None)
             user_states[user_id].pop("pending_price", None)
 
-    except Exception as e:
+    
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
 
 async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id != ADMIN_ID:
         return
 
-    try:
+    
         user_id = int(update.message.text.split("_")[1])
 
         # ✅ เช็กว่ามีออเดอร์อยู่หรือไม่
@@ -549,7 +549,7 @@ async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_states[user_id].pop("pending_item", None)
             user_states[user_id].pop("pending_price", None)
 
-    except Exception as e:
+    
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
 
 async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -647,18 +647,41 @@ async def main():
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
     print("🤖 Bot is running...")
-    app.run_polling()
+    
 
 if __name__ == "__main__":
     nest_asyncio.apply()
-    keep_alive()
+    
     dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
     dns.resolver.default_resolver.nameservers = ['8.8.8.8', '1.1.1.1']
 
-    loop = asyncio.get_event_loop()
-    while True:
-        try:
-            loop.run_until_complete(main())
-        except Exception as e:
+    
+    
+        
+            
+        
             print(f"❗ Bot crashed: {e}, restarting in 5s...")
-            time.sleep(5)
+            
+
+
+from fastapi import FastAPI, Request
+import uvicorn
+
+fastapi_app = FastAPI()
+telegram_app = None
+
+@fastapi_app.post("/")
+async def webhook(req: Request):
+    data = await req.json()
+    await telegram_app.update_queue.put(data)
+    return {"ok": True}
+
+async def launch():
+    global telegram_app
+    telegram_app = await main()
+
+if __name__ == "__main__":
+    import nest_asyncio
+    nest_asyncio.apply()
+    asyncio.run(launch())
+    uvicorn.run("telegram_webhook_full:fastapi_app", host="0.0.0.0", port=10000)
