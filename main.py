@@ -438,9 +438,9 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user_id not in pending_orders:
             await update.message.reply_text(
                 f"⚠️ ไม่มีออเดอร์ที่รออนุมัติจาก {user_id} หรืออาจอนุมัติไปแล้ว"
-        )
-        return
-        
+            )
+            return
+
         order = pending_orders[user_id]
 
         # --- จุดที่เพิ่มข้อความพิเศษสำหรับ Secret Archive Drop ---
