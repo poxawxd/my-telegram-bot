@@ -523,24 +523,26 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id != ADMIN_ID:
         return
+
     try:
         user_id = int(update.message.text.split("_")[1])
 
-        # ✅ ป้องกันกดซ้ำ
+        # ✅ เช็กว่ามีออเดอร์อยู่หรือไม่
         if user_id not in pending_orders:
-            await update.message.reply_text(f"⚠️ ไม่มีออเดอร์ที่รอพิจารณาสำหรับ {user_id}")
+            await update.message.reply_text(
+                f"⚠️ ไม่มีออเดอร์ที่รอพิจารณาสำหรับ {user_id}"
+            )
             return
 
-        # ⛔ แจ้งลูกค้า
+        # ❌ แจ้งลูกค้า
         await context.bot.send_message(
             chat_id=user_id,
             text="❌ การชำระเงินไม่ตรงยอด\n⛔ ร้านขอสงวนสิทธิ์ไม่คืนเงินที่โอนเล่น"
         )
         await update.message.reply_text(f"❌ ปฏิเสธออเดอร์ {user_id} แล้ว")
 
-        # 🧹 ลบออเดอร์และสถานะ
+        # 🔄 ลบข้อมูลที่เกี่ยวข้อง
         del pending_orders[user_id]
-
         if user_id in user_states:
             user_states[user_id].pop("pending_item", None)
             user_states[user_id].pop("pending_price", None)
