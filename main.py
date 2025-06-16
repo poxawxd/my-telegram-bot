@@ -70,6 +70,41 @@ main_menu = ReplyKeyboardMarkup(
 
 meta_lock = threading.Lock()
 
+from PIL import Image, ImageDraw, ImageFont
+from datetime import datetime
+
+def generate_receipt(user_id, gmail, item, price):
+    img = Image.new("RGB", (600, 300), color=(255, 255, 255))
+    draw = ImageDraw.Draw(img)
+
+    try:
+        font = ImageFont.truetype("arial.ttf", 18)
+    except:
+        font = ImageFont.load_default()
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    receipt_id = f"SS-{user_id}-{int(time.time())}"
+
+    lines = [
+        "🧾 Secret_Shop Receipt",
+        f"📅 วันที่: {now}",
+        f"🧾 รหัสใบเสร็จ: {receipt_id}",
+        f"👤 Telegram ID: {user_id}",
+        f"📧 Gmail: {gmail}",
+        f"📦 สินค้า: {item}",
+        f"💰 ยอดชำระ: {price} บาท",
+        "✅ ขอบคุณที่ใช้บริการ"
+    ]
+
+    y = 20
+    for line in lines:
+        draw.text((30, y), line, font=font, fill=(0, 0, 0))
+        y += 35
+
+    path = f"receipt_{user_id}.png"
+    img.save(path)
+    return path
+
 def save_user_meta():
     import os
     print("📁 meta.json path:", os.path.abspath("meta.json"))
@@ -423,6 +458,25 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"✅ ยืนยันการชำระเงิน\n📧 Gmail: {order['gmail']}\n🔗 ลิงก์สินค้า: {stock[order['item']]['url']}"
             )
         )
+
+                # ✅ ส่งใบเสร็จให้ลูกค้า
+        receipt_path = generate_receipt(
+            user_id=user_id,
+            gmail=order["gmail"],
+            item=order["item"],
+            price=order["price"]
+        )
+
+        try:
+            with open(receipt_path, "rb") as photo:
+                await context.bot.send_photo(
+                    chat_id=user_id,
+                    photo=photo,
+                    caption="🧾 ใบเสร็จของคุณ (เก็บไว้เป็นหลักฐานนะครับ)"
+                )
+            os.remove(receipt_path)  # ลบไฟล์หลังส่ง
+        except Exception as e:
+            print(f"❌ ส่งใบเสร็จล้มเหลว: {e}")
 
         # ส่วนที่เขียน meta.json และแจ้ง admin ยังคงเหมือนเดิม
         try:
