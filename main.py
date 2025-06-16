@@ -74,15 +74,17 @@ meta_lock = threading.Lock()
 
 from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime
+import time
+import pytz
 
 def generate_receipt(user_id, gmail, item, price):
     img = Image.new("RGB", (600, 300), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
 
-try:
-    font = ImageFont.truetype("arial.ttf", 18)
-except:
-    font = ImageFont.load_default()
+    try:
+        font = ImageFont.truetype("arial.ttf", 18)
+    except:
+        font = ImageFont.load_default()
 
     # ใช้เวลาไทย
     bangkok = pytz.timezone("Asia/Bangkok")
@@ -112,12 +114,13 @@ except:
 
 def save_user_meta():
     import os
+    import json
+
     print("📁 meta.json path:", os.path.abspath("meta.json"))
-    
-    print("🧠 เรียก save_user_meta()")  # <--- เพิ่มบรรทัดนี้
+    print("🧠 เรียก save_user_meta()")
 
     current_meta = {}
-    if os.path.exists("meta.json"):    
+    if os.path.exists("meta.json"):
         try:
             with open("meta.json", "r") as f:
                 current_meta = json.load(f)
@@ -137,14 +140,15 @@ def save_user_meta():
             old_data[k] = v
         current_meta[str(uid)] = old_data
 
-    
+    # บันทึกไฟล์ meta.json
+    try:
         with open("meta.json", "w") as f:
             json.dump(current_meta, f, indent=2)
-        print("✅ meta.json อัปเดตแล้ว")  # <--- บรรทัดนี้สำคัญ
-    
+        print("✅ meta.json อัปเดตแล้ว")
+    except Exception as e:
         print(f"❌ เขียน meta.json ไม่ได้: {e}")
 
-    # อัปเดตในตัวแปร
+    # อัปเดตในตัวแปร user_meta
     user_meta.clear()
     user_meta.update(current_meta)
 
