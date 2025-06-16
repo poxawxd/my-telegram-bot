@@ -431,15 +431,17 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id != ADMIN_ID:
         return
+
     try:
         user_id = int(update.message.text.split("_")[1])
         user_id_str = str(user_id)
-            # ✅ เช็กว่า user มีออเดอร์ใน pending หรือไม่
-    if user_id not in pending_orders:
-        await update.message.reply_text(
-            f"⚠️ ไม่มีออเดอร์ที่รออนุมัติจาก {user_id} หรืออาจอนุมัติไปแล้ว"
-        )
-        return
+
+        # ✅ เช็กว่า user มีออเดอร์ใน pending หรือไม่
+        if user_id not in pending_orders:
+            await update.message.reply_text(
+                f"⚠️ ไม่มีออเดอร์ที่รออนุมัติจาก {user_id} หรืออาจอนุมัติไปแล้ว"
+            )
+            return
 
         order = pending_orders[user_id]
 
@@ -467,7 +469,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         )
 
-                # ✅ ส่งใบเสร็จให้ลูกค้า
+        # ✅ สร้างใบเสร็จ
         receipt_path = generate_receipt(
             user_id=user_id,
             gmail=order["gmail"],
@@ -482,11 +484,11 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     photo=photo,
                     caption="🧾 ใบเสร็จของคุณ (เก็บไว้เป็นหลักฐานนะครับ)"
                 )
-            os.remove(receipt_path)  # ลบไฟล์หลังส่ง
+            os.remove(receipt_path)
         except Exception as e:
             print(f"❌ ส่งใบเสร็จล้มเหลว: {e}")
 
-        # ส่วนที่เขียน meta.json และแจ้ง admin ยังคงเหมือนเดิม
+        # ✅ อัปเดต meta.json
         try:
             if os.path.exists("meta.json"):
                 with open("meta.json", "r") as f:
@@ -502,7 +504,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             with open("meta.json", "w") as f:
                 json.dump(current_meta, f, indent=2)
-            print("✅ เขียน meta.json ตรงๆ สำเร็จ")
+            print("✅ เขียน meta.json สำเร็จ")
         except Exception as e:
             print(f"❌ เขียน meta.json ล้มเหลว: {e}")
 
