@@ -434,10 +434,13 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_id = int(update.message.text.split("_")[1])
         user_id_str = str(user_id)
+            # ✅ เช็กว่า user มีออเดอร์ใน pending หรือไม่
         if user_id not in pending_orders:
-            await update.message.reply_text(f"⚠️ ไม่มีคำสั่งซื้อที่รอยืนยันจากผู้ใช้ {user_id}")
-            return
-
+            await update.message.reply_text(
+                f"⚠️ ไม่มีออเดอร์ที่รออนุมัติจาก {user_id} หรืออาจอนุมัติไปแล้ว"
+        )
+        return
+        
         order = pending_orders[user_id]
 
         # --- จุดที่เพิ่มข้อความพิเศษสำหรับ Secret Archive Drop ---
@@ -514,8 +517,6 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_states[user_id].pop("pending_item", None)
             user_states[user_id].pop("pending_price", None)
 
-        approved_users.add(user_id)
-
     except Exception as e:
         await update.message.reply_text(f"❌ เกิดข้อผิดพลาด: {e}")
 
@@ -527,13 +528,9 @@ async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         return
 
-    if user_id in approved_users:
-        await update.message.reply_text(f"⚠️ ออเดอร์ของ {user_id} ถูก *อนุมัติ* ไปแล้ว ไม่สามารถปฏิเสธได้")
-        return
-
-    if user_id in denied_users:
-        await update.message.reply_text(f"⚠️ ออเดอร์ของ {user_id} ถูก *ปฏิเสธ* ไปแล้ว")
-        return
+    if user_id not in pending_orders:
+    await update.message.reply_text(f"⚠️ ไม่มีออเดอร์ที่รอพิจารณาสำหรับ {user_id}")
+    return
 
     await context.bot.send_message(
         chat_id=user_id,
@@ -547,8 +544,6 @@ async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in user_states:
         user_states[user_id].pop("pending_item", None)
         user_states[user_id].pop("pending_price", None)
-
-    denied_users.add(user_id)  # บันทึกว่าเคยปฏิเสธแล้ว
 
 async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
