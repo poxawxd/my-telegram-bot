@@ -97,7 +97,7 @@ def generate_receipt(user_id, gmail, item, price):
         f"Telegram ID: {user_id}",
         f"Gmail: {gmail}",
         f"Item: {item}",
-        f"Price: {price} บาท",
+        f"Price: {price} Bath",
         "Thank You For Buying"
     ]
 
