@@ -91,14 +91,14 @@ def generate_receipt(user_id, gmail, item, price):
     receipt_id = f"SS-{user_id}-{int(time.time())}"
 
     lines = [
-        "🧾 Secret_Shop Receipt",
-        f"📅 วันที่: {now}",
-        f"🧾 รหัสใบเสร็จ: {receipt_id}",
-        f"👤 Telegram ID: {user_id}",
-        f"📧 Gmail: {gmail}",
-        f"📦 สินค้า: {item}",
-        f"💰 ยอดชำระ: {price} บาท",
-        "✅ ขอบคุณที่ใช้บริการ"
+        "Secret_Shop Receipt",
+        f"วันที่: {now}",
+        f"รหัสใบเสร็จ: {receipt_id}",
+        f"Telegram ID: {user_id}",
+        f"Gmail: {gmail}",
+        f"สินค้า: {item}",
+        f"ยอดชำระ: {price} บาท",
+        "ขอบคุณที่ใช้บริการ"
     ]
 
     y = 20
