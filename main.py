@@ -435,11 +435,11 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = int(update.message.text.split("_")[1])
         user_id_str = str(user_id)
             # ✅ เช็กว่า user มีออเดอร์ใน pending หรือไม่
-        if user_id not in pending_orders:
-            await update.message.reply_text(
-                f"⚠️ ไม่มีออเดอร์ที่รออนุมัติจาก {user_id} หรืออาจอนุมัติไปแล้ว"
-            )
-            return
+    if user_id not in pending_orders:
+        await update.message.reply_text(
+            f"⚠️ ไม่มีออเดอร์ที่รออนุมัติจาก {user_id} หรืออาจอนุมัติไปแล้ว"
+        )
+        return
 
         order = pending_orders[user_id]
 
@@ -529,8 +529,8 @@ async def deny(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if user_id not in pending_orders:
-    await update.message.reply_text(f"⚠️ ไม่มีออเดอร์ที่รอพิจารณาสำหรับ {user_id}")
-    return
+        await update.message.reply_text(f"⚠️ ไม่มีออเดอร์ที่รอพิจารณาสำหรับ {user_id}")
+        return
 
     await context.bot.send_message(
         chat_id=user_id,
