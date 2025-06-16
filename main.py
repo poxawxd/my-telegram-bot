@@ -9,13 +9,6 @@ import os
 from datetime import datetime
 import pytz
 
-def generate_receipt(...):
-    ...
-    bangkok = pytz.timezone("Asia/Bangkok")
-    now = datetime.now(bangkok).strftime("%Y-%m-%d %H:%M")
-    ...
-
-
 # โหลดข้อมูลยอดซื้อจากไฟล์
 if os.path.exists("meta.json"):
     with open("meta.json", "r") as f:
@@ -91,7 +84,10 @@ def generate_receipt(user_id, gmail, item, price):
     except:
         font = ImageFont.load_default()
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # ใช้เวลาไทย
+    bangkok = pytz.timezone("Asia/Bangkok")
+    now = datetime.now(bangkok).strftime("%Y-%m-%d %H:%M")
+
     receipt_id = f"SS-{user_id}-{int(time.time())}"
 
     lines = [
