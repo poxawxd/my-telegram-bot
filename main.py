@@ -6,6 +6,15 @@ import random
 import threading
 import json
 import os
+from datetime import datetime
+import pytz
+
+def generate_receipt(...):
+    ...
+    bangkok = pytz.timezone("Asia/Bangkok")
+    now = datetime.now(bangkok).strftime("%Y-%m-%d %H:%M")
+    ...
+
 
 # โหลดข้อมูลยอดซื้อจากไฟล์
 if os.path.exists("meta.json"):
