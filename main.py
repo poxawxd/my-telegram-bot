@@ -79,10 +79,10 @@ def generate_receipt(user_id, gmail, item, price):
     img = Image.new("RGB", (600, 300), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
 
-    
-        font = ImageFont.truetype("arial.ttf", 18)
-    except:
-        font = ImageFont.load_default()
+try:
+    font = ImageFont.truetype("arial.ttf", 18)
+except:
+    font = ImageFont.load_default()
 
     # ใช้เวลาไทย
     bangkok = pytz.timezone("Asia/Bangkok")
@@ -119,10 +119,11 @@ def save_user_meta():
     current_meta = {}
     if os.path.exists("meta.json"):
         
-            with open("meta.json", "r") as f:
-                current_meta = json.load(f)
-        except Exception:
-            print("❌ อ่าน meta.json ไม่ได้")  # เพิ่มตรงนี้ด้วย
+    try:
+        with open("meta.json", "r") as f:
+            current_meta = json.load(f)
+    except Exception:
+        print("❌ อ่าน meta.json ไม่ได้")
 
     # รวมค่าใหม่เข้าไป
     for uid, new_data in user_meta.items():
@@ -631,7 +632,10 @@ async def gacha_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return  # จบการทำงานตรงนี้ ไม่ต้องแสดงข้อความสุ่มปกติ
 
 async def main():
-    app = ApplicationBuilder().token(TOKEN).build()
+    global telegram_app
+    telegram_app = ApplicationBuilder().token(TOKEN).build()
+    ...
+    return telegram_app
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("menu", menu))
@@ -647,22 +651,6 @@ async def main():
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
     print("🤖 Bot is running...")
-    
-
-if __name__ == "__main__":
-    nest_asyncio.apply()
-    
-    dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
-    dns.resolver.default_resolver.nameservers = ['8.8.8.8', '1.1.1.1']
-
-    
-    
-        
-            
-        
-            print(f"❗ Bot crashed: {e}, restarting in 5s...")
-            
-
 
 from fastapi import FastAPI, Request
 import uvicorn
@@ -682,6 +670,8 @@ async def launch():
 
 if __name__ == "__main__":
     import nest_asyncio
+    import uvicorn
+
     nest_asyncio.apply()
-    asyncio.run(launch())
+    asyncio.run(launch())  # launch คือ async ที่เรียก main()
     uvicorn.run("telegram_webhook_full:fastapi_app", host="0.0.0.0", port=10000)
