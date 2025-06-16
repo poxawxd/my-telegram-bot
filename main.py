@@ -117,13 +117,12 @@ def save_user_meta():
     print("🧠 เรียก save_user_meta()")  # <--- เพิ่มบรรทัดนี้
 
     current_meta = {}
-    if os.path.exists("meta.json"):
-        
-    try:
-        with open("meta.json", "r") as f:
-            current_meta = json.load(f)
-    except Exception:
-        print("❌ อ่าน meta.json ไม่ได้")
+    if os.path.exists("meta.json"):    
+        try:
+            with open("meta.json", "r") as f:
+                current_meta = json.load(f)
+        except Exception:
+            print("❌ อ่าน meta.json ไม่ได้")
 
     # รวมค่าใหม่เข้าไป
     for uid, new_data in user_meta.items():
