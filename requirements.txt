@@ -2,6 +2,7 @@ python-telegram-bot==20.0
 flask
 telegram
 Pillow
+pytz
 dnspython
 nest-asyncio==1.6.0
 requests
